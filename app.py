@@ -9,6 +9,7 @@ from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
 import jieba
+import jieba.analyse
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 
 app = Flask(__name__)
@@ -26,10 +27,10 @@ class MyToken:
 # 個人群組測試權杖Group_ID: 
 # LINE Notify Token
 MyTokenTest = MyToken(
-    "", ""
+    "LINE Notify Token", "Group_ID"
 )
 MyTokenAnderson = MyToken(
-    "", ""
+    "LINE Notify Token", "Group_ID"
 )
 
 # 图片目录路径
@@ -40,7 +41,7 @@ BASE_URL = "https://raw.githubusercontent.com/mrsanderz/ImgRepo/main/"
 
 def get_image_urls():
     """Fetch the list of image URLs from local directory, along with original filenames."""
-    valid_extensions = (".jpg", ".png", ".jpeg")  # 允许的图像文件扩展名
+    valid_extensions = (".jpg", ".png", ".jpeg", ".PNG", ".JPG", ".JPEG", "GIF", "gif")  # 允许的图像文件扩展名
     try:
         files = os.listdir(IMAGE_DIR)
         image_urls = [
@@ -124,24 +125,12 @@ def handle_message(event):
         print("text", event.message.text)
         print("words", words)
 
-        if words:
-            tfidf = vectorizer.fit_transform([" ".join(words)])
-            feature_names = vectorizer.get_feature_names_out()
-            tfidf_scores = tfidf.toarray().flatten()
-
-            print("All keywords and their TF-IDF scores:")
-            for word, score in zip(feature_names, tfidf_scores):
-                print(word, score)
-
-            if tfidf_scores.size > 0:
-                max_index = tfidf_scores.argmax()
-                max_keyword = feature_names[max_index]
-                max_score = tfidf_scores[max_index]
-                print("Max keyword:", max_keyword, "Max score:", max_score)
-            else:
-                print("No significant words extracted for TF-IDF vectorization.")
-        else:
-            print("No valid words extracted for analysis.")
+        for x, w in jieba.analyse.extract_tags(event.message.text, withWeight=True):
+            print('%s %s' % (x, w))
+        tags_with_weights = jieba.analyse.extract_tags(event.message.text, topK=1, withWeight=True, allowPOS=())
+        if tags_with_weights:
+            max_keyword, max_score = tags_with_weights[0]
+            print('Keyword: %s Score: %s' % (max_keyword, max_score))
 
         # Find the first image that includes the user's text in its original filename
         for filename, url in image_data:
